@@ -55,7 +55,6 @@ def inject_theme_css(is_dark):
             background-color: {bg_color} !important;
         }}
 
-        /* 사이드바 배경 및 텍스트 통일 */
         [data-testid="stSidebar"] {{
             background-color: {sidebar_bg} !important;
             border-right: 1px solid {border_color};
@@ -67,10 +66,9 @@ def inject_theme_css(is_dark):
         .main .block-container {{
             padding-top: 1rem;
             padding-bottom: 2rem;
-            max-width: 1000px;
+            max-width: 1050px;
         }}
 
-        /* 헤더 카드 */
         .header-card {{
             background-color: {card_bg};
             border: 1px solid {border_color};
@@ -80,7 +78,6 @@ def inject_theme_css(is_dark):
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
         }}
 
-        /* 입력창 스타일 */
         .stTextInput input, .stNumberInput input {{
             background-color: {input_bg} !important;
             color: {text_color} !important;
@@ -104,16 +101,10 @@ def inject_theme_css(is_dark):
             background-color: {accent_btn_hover} !important;
         }}
 
-        /* 데이터프레임 표 내부 반전 방지 및 다크모드 적용 */
         [data-testid="stDataFrame"] {{
             background-color: {table_bg} !important;
         }}
         
-        div[data-baseweb="select"] > div {{
-            background-color: {input_bg} !important;
-            color: {text_color} !important;
-        }}
-
         .streamlit-expanderHeader {{
             background-color: {card_bg} !important;
             border: 1px solid {border_color} !important;
@@ -124,12 +115,10 @@ def inject_theme_css(is_dark):
     """, unsafe_allow_html=True)
 
 # ==========================================
-# 3. 사이드바 설정 (다크모드 토글 포함)
+# 3. 사이드바 설정
 # ==========================================
 st.sidebar.markdown("### 🎨 화면 설정")
 dark_mode = st.sidebar.toggle("🌙 다크 모드", value=True)
-
-# 테마 CSS 적용
 inject_theme_css(dark_mode)
 
 st.sidebar.markdown("---")
@@ -170,10 +159,8 @@ def get_tier_score(tier_name):
 def calculate_player_mmr(cur_tier, cur_rr, peak_tier, peak_rr, cur_weight=0.6):
     cur_base = get_tier_score(cur_tier)
     peak_base = get_tier_score(peak_tier)
-    
     cur_rr_val = int(cur_rr) if pd.notna(cur_rr) and str(cur_rr).isdigit() else 0
     peak_rr_val = int(peak_rr) if pd.notna(peak_rr) and str(peak_rr).isdigit() else 0
-    
     return ((cur_base + cur_rr_val) * cur_weight) + ((peak_base + peak_rr_val) * (1 - cur_weight))
 
 # ==========================================
@@ -187,14 +174,13 @@ def load_data_from_google_sheet(url):
         csv_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&_t={int(time.time())}"
         df = pd.read_csv(csv_url)
         df.columns = [str(col).replace(" ", "").strip() for col in df.columns]
-        
         missing = [h for h in REQUIRED_HEADERS if h not in df.columns]
         if missing:
             st.error(f"❌ 시트 헤더 오류: **{', '.join(missing)}** 항목이 누락되었습니다.")
             return None
         return df
     except Exception:
-        st.error("구글 시트를 불러오지 못했습니다. 링크 공유 설정(링크가 있는 모든 사용자 뷰어)을 확인해 주세요.")
+        st.error("구글 시트를 불러오지 못했습니다. 링크 공유 설정(뷰어 접근)을 확인하세요.")
         return None
 
 # ==========================================
@@ -205,7 +191,7 @@ def balance_multi_teams(df, num_teams, team_size=5, cur_weight=0.6):
     total_required = num_teams * team_size
     
     if len(players) < total_required:
-        st.warning(f"⚠️ 인원이 부족합니다! {num_teams}개 팀({team_size}명)을 짜려면 최소 {total_required}명이 필요합니다. (현재: {len(players)}명)")
+        st.warning(f"⚠️ 인원이 부족합니다! 최소 {total_required}명이 필요합니다. (현재: {len(players)}명)")
         return None, None
 
     for p in players:
@@ -231,12 +217,10 @@ def balance_multi_teams(df, num_teams, team_size=5, cur_weight=0.6):
     for _ in range(1000):
         t1, t2 = random.sample(range(num_teams), 2)
         idx1, idx2 = random.randint(0, team_size - 1), random.randint(0, team_size - 1)
-        
         teams[t1][idx1], teams[t2][idx2] = teams[t2][idx2], teams[t1][idx1]
         avgs = [team_avg(t) for t in teams]
         mean_avg = sum(avgs) / len(avgs)
         new_var = sum((a - mean_avg)**2 for a in avgs)
-        
         if new_var < best_var:
             best_var = new_var
         else:
@@ -249,18 +233,16 @@ def balance_multi_teams(df, num_teams, team_size=5, cur_weight=0.6):
 # ==========================================
 st.markdown("""
 <div class="header-card">
-    <h2 style="margin: 0; font-size: 1.3rem; font-weight: 700;">⚖️ TEAM BALANCER PRO</h2>
-    <p style="margin: 3px 0 0 0; font-size: 0.8rem; opacity: 0.75;">구글 시트 기반 컴팩트 밸런스 매칭 시스템</p>
+    <h2 style="margin: 0; font-size: 1.3rem; font-weight: 700;">⚖️ TEAM BALANCER PRO & MATCHMAKER</h2>
+    <p style="margin: 3px 0 0 0; font-size: 0.8rem; opacity: 0.75;">대진표 전적(몇전 몇승) 기입 • 포인트 자동 정산 (판당 150pt + 승리 70pt)</p>
 </div>
 """, unsafe_allow_html=True)
 
-# 입력 방식 선택 탭
 input_tab1, input_tab2 = st.tabs(["🔗 Google Sheets 연동", "✏️ 직접 명단 입력"])
-
 df_input = None
 
 with input_tab1:
-    sheet_url = st.text_input("구글 시트 공유 URL을 입력하세요", placeholder="https://docs.google.com/spreadsheets/d/...")
+    sheet_url = st.text_input("구글 시트 공유 URL 입력", placeholder="https://docs.google.com/spreadsheets/d/...")
     if sheet_url:
         df_sheet = load_data_from_google_sheet(sheet_url)
         if df_sheet is not None:
@@ -287,7 +269,7 @@ with input_tab2:
     )
 
 # ==========================================
-# 8. 결과 출력 대시보드
+# 8. 팀 매칭 및 대진표 / 포인트 시스템 대시보드
 # ==========================================
 st.markdown("---")
 
@@ -302,30 +284,18 @@ if run_match and df_input is not None:
     teams, avgs = balance_multi_teams(df_input, num_teams, team_size, cur_weight)
     
     if teams:
-        st.markdown("### 📊 밸런스 매칭 결과")
+        team_names_list = [f"TEAM {chr(65+i)}" for i in range(num_teams)]
         
-        # 요약 메트릭
-        max_diff = max(avgs) - min(avgs)
-        col1, col2, col3 = st.columns(3)
-        col1.metric("총 인원", f"{total_required}명 ({num_teams}팀)")
-        col2.metric("평균 평점", f"{sum(avgs)/len(avgs):.1f} pts")
-        col3.metric("팀 간 격차", f"{max_diff:.1f} pts")
-        
-        st.write("")
-        
-        # 팀별 카드 출력
+        st.markdown("### 📊 밸런스 매칭 결과 및 팀원 구성")
         cols = st.columns(num_teams)
         team_colors = ["#2563EB", "#16A34A", "#D97706", "#7C3AED", "#DB2777", "#0D9488"]
-        team_names = ["A TEAM", "B TEAM", "C TEAM", "D TEAM", "E TEAM", "F TEAM"]
         
         for i, col in enumerate(cols):
             with col:
                 t_color = team_colors[i % len(team_colors)]
-                t_name = team_names[i] if i < len(team_names) else f"TEAM {i+1}"
-                
                 st.markdown(f"""
                 <div style="background-color: {('#161B22' if dark_mode else '#FFFFFF')}; border-top: 3px solid {t_color}; border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; border-left: 1px solid {('#30363D' if dark_mode else '#E2E8F0')}; border-right: 1px solid {('#30363D' if dark_mode else '#E2E8F0')}; border-bottom: 1px solid {('#30363D' if dark_mode else '#E2E8F0')};">
-                    <span style="font-weight: 700; font-size: 0.9rem;">{t_name}</span>
+                    <span style="font-weight: 700; font-size: 0.9rem;">{team_names_list[i]}</span>
                     <span style="float: right; font-weight: 600; color: {t_color}; font-size: 0.8rem;">Avg {avgs[i]:.1f}</span>
                 </div>
                 """, unsafe_allow_html=True)
@@ -333,3 +303,79 @@ if run_match and df_input is not None:
                 df_t = pd.DataFrame(teams[i])[['닉네임', '현재티어', '최고티어', 'MMR']]
                 df_t['MMR'] = df_t['MMR'].round(1)
                 st.dataframe(df_t, use_container_width=True, hide_index=True)
+
+        # ==========================================
+        # 9. 대진표 커스텀 편집 및 포인트 정산 시스템 (전적 기입 기능 추가)
+        # ==========================================
+        st.markdown("---")
+        st.markdown("### 🏆 대진표 및 전적 편집 (몇 전 / 몇 승 기입)")
+        st.info("💡 각 매치별로 **진행한 경기 수(몇 전)**와 **승리한 횟수(몇 승)**를 직접 수정하고 기입할 수 있습니다.")
+
+        # 기본 대진표 생성 예시 (몇 전, 몇 승 컬럼 추가)
+        default_matches = []
+        for i in range(0, num_teams - 1, 2):
+            default_matches.append({
+                "경기 번호": f"Match {i//2 + 1}",
+                "블루팀 (1p)": team_names_list[i],
+                "블루팀 승수 (승)": 0,
+                "레드팀 (2p)": team_names_list[i+1],
+                "레드팀 승수 (승)": 0,
+                "총 경기수 (전)": 1
+            })
+        
+        edited_match_df = st.data_editor(
+            pd.DataFrame(default_matches),
+            num_rows="dynamic",
+            use_container_width=True,
+            key="match_editor_with_records"
+        )
+
+        st.markdown("---")
+        st.markdown("### 💰 포인트 지급 정산 결과")
+        st.markdown("규정: **참여한 경기 수 × 150 포인트 + 승리 횟수 × 70 포인트** 자동 정산")
+
+        if st.button("🎁 포인트 계산 및 정산 실행", type="primary"):
+            # 플레이어별 통계 초기화
+            player_stats = {}
+            for p_list in teams:
+                for p in p_list:
+                    player_stats[p['닉네임']] = {"total_games": 0, "total_wins": 0}
+
+            team_map = {team_names_list[i]: teams[i] for i in range(num_teams)}
+
+            # 대진표에 기입된 전적 반영
+            for _, row in edited_match_df.iterrows():
+                b_team = row.get("블루팀 (1p)")
+                b_wins = int(row.get("블루팀 승수 (승)", 0))
+                
+                r_team = row.get("레드팀 (2p)")
+                r_wins = int(row.get("레드팀 승수 (승)", 0))
+                
+                total_games = int(row.get("총 경기수 (전)", 1))
+
+                # 블루팀 정산 반영
+                if b_team in team_map:
+                    for p in team_map[b_team]:
+                        player_stats[p['닉네임']]["total_games"] += total_games
+                        player_stats[p['닉네임']]["total_wins"] += b_wins
+
+                # 레드팀 정산 반영
+                if r_team in team_map:
+                    for p in team_map[r_team]:
+                        player_stats[p['닉네임']]["total_games"] += total_games
+                        player_stats[p['닉네임']]["total_wins"] += r_wins
+
+            # 포인트 계산 (판당 150pt, 승리시 70pt)
+            result_data = []
+            for nick, stat in player_stats.items():
+                earned_pts = (stat["total_games"] * 150) + (stat["total_wins"] * 70)
+                result_data.append({
+                    "닉네임": nick,
+                    "총 참여 경기 (전)": stat["total_games"],
+                    "총 승리 횟수 (승)": stat["total_wins"],
+                    "지급 포인트 (PT)": earned_pts
+                })
+
+            df_points = pd.DataFrame(result_data)
+            st.success("✅ 대진표 전적 기반 포인트 정산이 완료되었습니다!")
+            st.dataframe(df_points, use_container_width=True, hide_index=True)
