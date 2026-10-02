@@ -14,7 +14,7 @@ st.set_page_config(
 )
 
 # ==========================================
-# 2. 다크/라이트모드 완벽 동기화 테마 CSS
+# 2. 다크/라이트모드 완벽 동기화 테마 CSS (VCT 브래킷 스타일 포함)
 # ==========================================
 def inject_theme_css(is_dark):
     if is_dark:
@@ -27,7 +27,7 @@ def inject_theme_css(is_dark):
         accent_btn = "#238636"
         accent_btn_hover = "#2ea043"
         table_bg = "#161B22"
-        table_text = "#E6EDF3"
+        bracket_bg = "#111620"
     else:
         bg_color = "#F8FAFC"
         sidebar_bg = "#F1F5F9"
@@ -38,7 +38,7 @@ def inject_theme_css(is_dark):
         accent_btn = "#2563EB"
         accent_btn_hover = "#1D4ED8"
         table_bg = "#FFFFFF"
-        table_text = "#0F172A"
+        bracket_bg = "#F1F5F9"
 
     st.markdown(f"""
     <style>
@@ -66,7 +66,7 @@ def inject_theme_css(is_dark):
         .main .block-container {{
             padding-top: 1rem;
             padding-bottom: 2rem;
-            max-width: 1050px;
+            max-width: 1100px;
         }}
 
         .header-card {{
@@ -76,6 +76,15 @@ def inject_theme_css(is_dark):
             padding: 14px 20px;
             margin-bottom: 16px;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+        }}
+
+        /* VCT 스타일 대진표 카드 컨테이너 */
+        .vct-bracket-box {{
+            background-color: {bracket_bg};
+            border: 1px solid {border_color};
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
         }}
 
         .stTextInput input, .stNumberInput input {{
@@ -123,7 +132,7 @@ inject_theme_css(dark_mode)
 
 st.sidebar.markdown("---")
 st.sidebar.markdown("### ⚙️ 매칭 설정")
-num_teams = st.sidebar.number_input("팀 개수", min_value=2, max_value=8, value=2, step=1)
+num_teams = st.sidebar.number_input("팀 개수 (3팀/5팀 등 홀수 가능)", min_value=2, max_value=8, value=4, step=1)
 team_size = st.sidebar.number_input("팀당 인원 수", min_value=1, max_value=5, value=5, step=1)
 cur_weight_pct = st.sidebar.slider("현재 티어 반영 비중 (%)", 0, 100, 60, 5)
 cur_weight = cur_weight_pct / 100.0
@@ -233,8 +242,8 @@ def balance_multi_teams(df, num_teams, team_size=5, cur_weight=0.6):
 # ==========================================
 st.markdown("""
 <div class="header-card">
-    <h2 style="margin: 0; font-size: 1.3rem; font-weight: 700;">⚖️ TEAM BALANCER PRO & MATCHMAKER</h2>
-    <p style="margin: 3px 0 0 0; font-size: 0.8rem; opacity: 0.75;">대진표 전적(몇전 몇승) 기입 • 포인트 자동 정산 (판당 150pt + 승리 70pt)</p>
+    <h2 style="margin: 0; font-size: 1.3rem; font-weight: 700;">⚔️ VCT STYLE TOURNAMENT & BALANCER</h2>
+    <p style="margin: 3px 0 0 0; font-size: 0.8rem; opacity: 0.75;">부전승(BYE) 지원 • 대진표 전적 기입 • 포인트 자동 정산 (판당 150pt + 승리 70pt)</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -269,7 +278,7 @@ with input_tab2:
     )
 
 # ==========================================
-# 8. 팀 매칭 및 대진표 / 포인트 시스템 대시보드
+# 8. 팀 매칭 및 VCT 브래킷 / 포인트 시스템
 # ==========================================
 st.markdown("---")
 
@@ -288,7 +297,7 @@ if run_match and df_input is not None:
         
         st.markdown("### 📊 밸런스 매칭 결과 및 팀원 구성")
         cols = st.columns(num_teams)
-        team_colors = ["#2563EB", "#16A34A", "#D97706", "#7C3AED", "#DB2777", "#0D9488"]
+        team_colors = ["#FF4655", "#38BDF8", "#34D399", "#FBBF24", "#A855F7", "#EC4899", "#6366F1", "#14B8A6"]
         
         for i, col in enumerate(cols):
             with col:
@@ -305,37 +314,69 @@ if run_match and df_input is not None:
                 st.dataframe(df_t, use_container_width=True, hide_index=True)
 
         # ==========================================
-        # 9. 대진표 커스텀 편집 및 포인트 정산 시스템 (전적 기입 기능 추가)
+        # 9. VCT 스타일 토너먼트 대진표 (부전승 & 전적 기입 포함)
         # ==========================================
         st.markdown("---")
-        st.markdown("### 🏆 대진표 및 전적 편집 (몇 전 / 몇 승 기입)")
-        st.info("💡 각 매치별로 **진행한 경기 수(몇 전)**와 **승리한 횟수(몇 승)**를 직접 수정하고 기입할 수 있습니다.")
+        st.markdown("### 🏆 VCT 스타일 토너먼트 대진표 & 부전승(BYE) 편집")
+        st.info("💡 3팀, 5팀 같은 홀수 팀일 경우 **'부전승 (BYE)'** 팀을 지정하거나 매치별 전적(몇 전/몇 승)을 자유롭게 편집할 수 있습니다.")
 
-        # 기본 대진표 생성 예시 (몇 전, 몇 승 컬럼 추가)
+        # 대진표 데이터 구성 (부전승 항목 추가)
         default_matches = []
-        for i in range(0, num_teams - 1, 2):
+        bye_team_option = "없음 (부전승 없음)"
+        if num_teams % 2 != 0:
+            # 홀수 팀일 경우 마지막 팀을 기본 부전승 후보로 지정
+            bye_team_option = team_names_list[-1]
+
+        col_b1, col_b2 = st.columns(2)
+        with col_b1:
+            selected_bye_team = st.selectbox("🛡️️ 부전승(BYE) 자동 진출 팀 선택", ["없음 (부전승 없음)"] + team_names_list, index=0 if num_teams % 2 == 0 else num_teams)
+        with col_b2:
+            st.write("")
+            if selected_bye_team != "없음 (부전승 없음)":
+                st.success(f"⭐ **{selected_bye_team}** 팀은 이번 라운드 부전승으로 자동 진출합니다!")
+
+        # 매치업 생성 (부전승 팀 제외하고 매칭)
+        active_teams = [t for t in team_names_list if t != selected_bye_team]
+        for i in range(0, len(active_teams) - 1, 2):
             default_matches.append({
-                "경기 번호": f"Match {i//2 + 1}",
-                "블루팀 (1p)": team_names_list[i],
+                "라운드": "Quarterfinals / Semis",
+                "경기 번호": f"MATCH 0{i//2 + 1}",
+                "블루팀 (1p)": active_teams[i],
                 "블루팀 승수 (승)": 0,
-                "레드팀 (2p)": team_names_list[i+1],
+                "레드팀 (2p)": active_teams[i+1],
                 "레드팀 승수 (승)": 0,
                 "총 경기수 (전)": 1
             })
-        
+
+        # 남은 홀수 팀이 있으면 부전승 안내 행 추가
+        if len(active_teams) % 2 != 0:
+            default_matches.append({
+                "라운드": "BYE (부전승)",
+                "경기 번호": "MATCH BYE",
+                "블루팀 (1p)": active_teams[-1],
+                "블루팀 승수 (승)": 1,
+                "레드팀 (2p)": "부전승 (BYE)",
+                "레드팀 승수 (승)": 0,
+                "총 경기수 (전)": 0
+            })
+
+        st.markdown('<div class="vct-bracket-box">', unsafe_allow_html=True)
         edited_match_df = st.data_editor(
             pd.DataFrame(default_matches),
             num_rows="dynamic",
             use_container_width=True,
-            key="match_editor_with_records"
+            key="vct_match_editor"
         )
+        st.markdown('</div>', unsafe_allow_html=True)
 
+        # ==========================================
+        # 10. 포인트 정산 시스템
+        # ==========================================
         st.markdown("---")
         st.markdown("### 💰 포인트 지급 정산 결과")
-        st.markdown("규정: **참여한 경기 수 × 150 포인트 + 승리 횟수 × 70 포인트** 자동 정산")
+        st.markdown("규정: **참여한 경기 수(전) × 150 포인트 + 승리 횟수(승) × 70 포인트** 자동 계산")
 
         if st.button("🎁 포인트 계산 및 정산 실행", type="primary"):
-            # 플레이어별 통계 초기화
             player_stats = {}
             for p_list in teams:
                 for p in p_list:
@@ -343,7 +384,6 @@ if run_match and df_input is not None:
 
             team_map = {team_names_list[i]: teams[i] for i in range(num_teams)}
 
-            # 대진표에 기입된 전적 반영
             for _, row in edited_match_df.iterrows():
                 b_team = row.get("블루팀 (1p)")
                 b_wins = int(row.get("블루팀 승수 (승)", 0))
@@ -353,19 +393,18 @@ if run_match and df_input is not None:
                 
                 total_games = int(row.get("총 경기수 (전)", 1))
 
-                # 블루팀 정산 반영
+                # 블루팀 반영
                 if b_team in team_map:
                     for p in team_map[b_team]:
                         player_stats[p['닉네임']]["total_games"] += total_games
                         player_stats[p['닉네임']]["total_wins"] += b_wins
 
-                # 레드팀 정산 반영
-                if r_team in team_map:
+                # 레드팀 반영 (부전승인 경우 제외)
+                if r_team in team_map and r_team != "부전승 (BYE)":
                     for p in team_map[r_team]:
                         player_stats[p['닉네임']]["total_games"] += total_games
                         player_stats[p['닉네임']]["total_wins"] += r_wins
 
-            # 포인트 계산 (판당 150pt, 승리시 70pt)
             result_data = []
             for nick, stat in player_stats.items():
                 earned_pts = (stat["total_games"] * 150) + (stat["total_wins"] * 70)
@@ -377,5 +416,5 @@ if run_match and df_input is not None:
                 })
 
             df_points = pd.DataFrame(result_data)
-            st.success("✅ 대진표 전적 기반 포인트 정산이 완료되었습니다!")
+            st.success("✅ VCT 대진표 전적 및 부전승 반영 포인트 정산 완료!")
             st.dataframe(df_points, use_container_width=True, hide_index=True)
