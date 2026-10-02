@@ -14,7 +14,7 @@ st.set_page_config(
 )
 
 # ==========================================
-# 2. 컴팩트 미니멀 테마 CSS (사이드바 + 표 컴포넌트 완벽 연동)
+# 2. 다크/라이트모드 완벽 동기화 테마 CSS
 # ==========================================
 def inject_theme_css(is_dark):
     if is_dark:
@@ -23,7 +23,6 @@ def inject_theme_css(is_dark):
         card_bg = "#161B22"
         border_color = "#30363D"
         text_color = "#E6EDF3"
-        sub_text = "#8B949E"
         input_bg = "#21262D"
         accent_btn = "#238636"
         accent_btn_hover = "#2ea043"
@@ -35,7 +34,6 @@ def inject_theme_css(is_dark):
         card_bg = "#FFFFFF"
         border_color = "#E2E8F0"
         text_color = "#0F172A"
-        sub_text = "#64748B"
         input_bg = "#FFFFFF"
         accent_btn = "#2563EB"
         accent_btn_hover = "#1D4ED8"
@@ -54,10 +52,10 @@ def inject_theme_css(is_dark):
         }}
 
         .stApp {{
-            background-color: {bg_color};
+            background-color: {bg_color} !important;
         }}
 
-        /* 사이드바 배경 및 텍스트 완벽 대응 */
+        /* 사이드바 배경 및 텍스트 통일 */
         [data-testid="stSidebar"] {{
             background-color: {sidebar_bg} !important;
             border-right: 1px solid {border_color};
@@ -72,7 +70,7 @@ def inject_theme_css(is_dark):
             max-width: 1000px;
         }}
 
-        /* 컴팩트 헤더 카드 */
+        /* 헤더 카드 */
         .header-card {{
             background-color: {card_bg};
             border: 1px solid {border_color};
@@ -82,7 +80,7 @@ def inject_theme_css(is_dark):
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
         }}
 
-        /* 입력창 및 버튼 컴팩트화 */
+        /* 입력창 스타일 */
         .stTextInput input, .stNumberInput input {{
             background-color: {input_bg} !important;
             color: {text_color} !important;
@@ -101,31 +99,19 @@ def inject_theme_css(is_dark):
             padding: 0.45rem 1rem !important;
             font-size: 13px !important;
             width: 100%;
-            transition: all 0.2s ease;
         }}
         .stButton > button:hover {{
             background-color: {accent_btn_hover} !important;
         }}
 
-        /* 데이터프레임 및 데이터 에디터 표 컴포넌트 다크/라이트모드 동기화 */
-        [data-testid="stDataFrame"] div, [data-testid="stDataEditor"] div {{
+        /* 데이터프레임 표 내부 반전 방지 및 다크모드 적용 */
+        [data-testid="stDataFrame"] {{
             background-color: {table_bg} !important;
-            color: {table_text} !important;
         }}
         
-        table {{
-            background-color: {table_bg} !important;
-            color: {table_text} !important;
-        }}
-
-        th {{
+        div[data-baseweb="select"] > div {{
             background-color: {input_bg} !important;
             color: {text_color} !important;
-        }}
-
-        td {{
-            background-color: {table_bg} !important;
-            color: {table_text} !important;
         }}
 
         .streamlit-expanderHeader {{
@@ -143,6 +129,7 @@ def inject_theme_css(is_dark):
 st.sidebar.markdown("### 🎨 화면 설정")
 dark_mode = st.sidebar.toggle("🌙 다크 모드", value=True)
 
+# 테마 CSS 적용
 inject_theme_css(dark_mode)
 
 st.sidebar.markdown("---")
@@ -268,7 +255,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # 입력 방식 선택 탭
-input_tab1, input_tab2 = st.tabs(["🔗 Google Sheets 연동", "✏️️ 직접 명단 입력"])
+input_tab1, input_tab2 = st.tabs(["🔗 Google Sheets 연동", "✏️ 직접 명단 입력"])
 
 df_input = None
 
