@@ -308,7 +308,7 @@ if run_match and df_input is not None:
         # 9. VCT 레퍼런스 스타일 대진표 카드 UI (참조 이미지 반영)
         # ==========================================
         st.markdown("---")
-        st.markdown("### 🏆 VCT 스타일 토너먼트 대진표 & 부전승(BYE) 설정")
+        st.markdown("### 🏆 토너먼트 대진표 & 부전승(BYE) 설정")
         st.info("💡 3팀, 5팀 같은 홀수 팀일 경우 **'부전승 (BYE)'** 팀을 지정하면 해당 팀은 상위 라운드로 자동 진출하며 매치 카드가 생성됩니다.")
 
         col_b1, col_b2 = st.columns(2)
