@@ -120,7 +120,7 @@ inject_theme_css(dark_mode)
 
 st.sidebar.markdown("---")
 st.sidebar.markdown("### ⚙️ 매칭 설정")
-num_teams = st.sidebar.number_input("팀 개수 (3팀/5팀 등 홀수 가능)", min_value=2, max_value=8, value=4, step=1)
+num_teams = st.sidebar.number_input("팀 개수 (3팀~8팀 지원)", min_value=2, max_value=8, value=4, step=1)
 team_size = st.sidebar.number_input("팀당 인원 수", min_value=1, max_value=5, value=5, step=1)
 cur_weight_pct = st.sidebar.slider("현재 티어 반영 비중 (%)", 0, 100, 60, 5)
 cur_weight = cur_weight_pct / 100.0
@@ -231,7 +231,7 @@ def balance_multi_teams(df, num_teams, team_size=5, cur_weight=0.6):
 st.markdown("""
 <div class="header-card">
     <h2 style="margin: 0; font-size: 1.3rem; font-weight: 700;">🏆 VCT STYLE TOURNAMENT & BALANCER</h2>
-    <p style="margin: 3px 0 0 0; font-size: 0.8rem; opacity: 0.75;">토너먼트 브래킷 자동 승자 연동 • 부전승(BYE) 지원 • 포인트 자동 정산</p>
+    <p style="margin: 3px 0 0 0; font-size: 0.8rem; opacity: 0.75;">다단계 토너먼트 자동 연동 브래킷 • 부전승(BYE) 지원 • 포인트 자동 정산</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -266,7 +266,7 @@ with input_tab2:
     )
 
 # ==========================================
-# 8. 팀 매칭 및 VCT 토너먼트 브래킷
+# 8. 팀 매칭 및 멀티 라운드 토너먼트 브래킷
 # ==========================================
 st.markdown("---")
 
@@ -302,118 +302,115 @@ if run_match and df_input is not None:
                 st.dataframe(df_t, use_container_width=True, hide_index=True)
 
         # ==========================================
-        # 9. 토너먼트 브래킷 (실시간 승자 연동)
+        # 9. 동적 토너먼트 브래킷 (팀 수에 따른 자동 라운드 확장)
         # ==========================================
         st.markdown("---")
-        st.markdown("### 🏆토너먼트 대진표")
-        st.info("💡 1라운드(준결승 등)에서 스코어를 입력하면, **승리한 팀이 결승전(Match Final) 매치업에 자동으로 반영**됩니다[cite: 14].")
+        st.markdown("### 🏆 다단계 토너먼트 대진표 (자동 승자 연동)")
+        st.info("💡 각 라운드 경기 스코어를 입력하면, 승리한 팀들이 자동으로 다음 라운드(준결승 및 결승) 매치업으로 진출합니다[cite: 14].")
 
-        col_b1, col_b2 = st.columns(2)
-        with col_b1:
-            selected_bye_team = st.selectbox("🛡 부전승(BYE) 자동 진출 팀 선택", ["없음 (부전승 없음)"] + team_names_list, index=0 if num_teams % 2 == 0 else num_teams)
-        with col_b2:
-            st.write("")
-            if selected_bye_team != "없음 (부전승 없음)":
-                st.success(f"⭐ **{selected_bye_team}** 팀은 부전승으로 상위 라운드에 직행합니다!")
-
-        # 1라운드 매치업 구성
-        active_teams = [t for t in team_names_list if t != selected_bye_team]
-        round1_matches = []
-        for i in range(0, len(active_teams) - 1, 2):
-            round1_matches.append({
-                "match_id": f"MATCH 0{i//2 + 1}",
-                "team1": active_teams[i],
-                "team2": active_teams[i+1],
-            })
-        bye_team_assigned = active_teams[-1] if len(active_teams) % 2 != 0 else None
-
+        all_match_records = []
+        
         st.markdown('<div class="vct-bracket-container">', unsafe_allow_html=True)
-        st.markdown("<h4 style='margin-top:0; font-size:1rem; font-weight:700;'>🔹 Round 1 (준결승 / 1라운드)</h4>", unsafe_allow_html=True)
         
-        r1_results = []
-        for idx, m in enumerate(round1_matches):
-            st.markdown(f"<p style='font-size: 0.75rem; font-weight: 700; color: #888; margin-bottom: 2px;'>{m['match_id']}</p>", unsafe_allow_html=True)
-            c1, c2, c3 = st.columns([5, 1.5, 1.5])
-            with c1:
-                st.markdown(f"""
-                <div style="background-color: {'#21262D' if dark_mode else '#E2D929'}; color: {'#E6EDF3' if dark_mode else '#111111'}; padding: 6px 10px; border-radius: 6px; font-weight: 700; margin-bottom: 3px; font-size:12px;">
-                    1P: {m['team1']}
-                </div>
-                <div style="background-color: {'#21262D' if dark_mode else '#E2D929'}; color: {'#E6EDF3' if dark_mode else '#111111'}; padding: 6px 10px; border-radius: 6px; font-weight: 700; font-size:12px;">
-                    2P: {m['team2']}
-                </div>
-                """, unsafe_allow_html=True)
-            with c2:
-                s1 = st.number_input("1P 승수", min_value=0, max_value=5, value=0, key=f"t_r1_s1_{idx}")
-                s2 = st.number_input("2P 승수", min_value=0, max_value=5, value=0, key=f"t_r1_s2_{idx}")
-            with c3:
-                t_games = st.number_input("총 경기", min_value=0, max_value=7, value=1, key=f"t_r1_tg_{idx}")
-            
-            st.markdown("<hr style='margin: 8px 0; border-color: rgba(150,150,150,0.15);'>", unsafe_allow_html=True)
-            
-            # 승자 판정 (동률일 경우 1P 기본 승리)
-            winner = m['team1'] if s1 >= s2 else m['team2']
-            r1_results.append({
-                "match_id": m['match_id'],
-                "team1": m['team1'], "s1": s1,
-                "team2": m['team2'], "s2": s2,
-                "total_games": t_games,
-                "winner": winner,
-                "is_bye": False
-            })
-
-        # 결승전(Round 2) 자동 연동 매치 구성
-        st.markdown("<h4 style='margin-top:20px; font-size:1rem; font-weight:700;'>🔥 Round 2 / Finals (결승전 - 준결승 승자 자동 연동)</h4>", unsafe_allow_html=True)
+        # [단계 1] 8팀 / 6팀 / 5팀 등의 1라운드(Quarterfinals 또는 Prelims) 생성
+        current_round_teams = list(team_names_list)
         
-        r1_winners = [r['winner'] for r in r1_results]
-        if bye_team_assigned:
-            r1_winners.append(bye_team_assigned)
+        # 홀수 팀일 경우 첫 번째 팀 부전승 처리 안내
+        round_idx = 1
+        r_results = []
+        
+        while len(current_round_teams) > 2:
+            st.markdown(f"<h4 style='margin-top:10px; font-size:1rem; font-weight:700;'>🔹 Round {round_idx} (예선 / 준준결승)</h4>", unsafe_allow_html=True)
+            
+            next_round_winners = []
+            matches_in_this_round = []
+            
+            i = 0
+            while i < len(current_round_teams) - 1:
+                t1 = current_round_teams[i]
+                t2 = current_round_teams[i+1]
+                match_name = f"R{round_idx} - MATCH {i//2 + 1}"
+                
+                st.markdown(f"<p style='font-size: 0.75rem; font-weight: 700; color: #888; margin-bottom: 2px;'>{match_name}</p>", unsafe_allow_html=True)
+                c1, c2, c3 = st.columns([5, 1.5, 1.5])
+                with c1:
+                    st.markdown(f"""
+                    <div style="background-color: {'#21262D' if dark_mode else '#E2D929'}; color: {'#E6EDF3' if dark_mode else '#111111'}; padding: 6px 10px; border-radius: 6px; font-weight: 700; margin-bottom: 3px; font-size:12px;">
+                        1P: {t1}
+                    </div>
+                    <div style="background-color: {'#21262D' if dark_mode else '#E2D929'}; color: {'#E6EDF3' if dark_mode else '#111111'}; padding: 6px 10px; border-radius: 6px; font-weight: 700; font-size:12px;">
+                        2P: {t2}
+                    </div>
+                    """, unsafe_allow_html=True)
+                with c2:
+                    s1 = st.number_input("1P 승수", min_value=0, max_value=5, value=0, key=f"r{round_idx}_s1_{i}")
+                    s2 = st.number_input("2P 승수", min_value=0, max_value=5, value=0, key=f"r{round_idx}_s2_{i}")
+                with c3:
+                    t_games = st.number_input("총 경기", min_value=0, max_value=7, value=1, key=f"r{round_idx}_tg_{i}")
+                
+                st.markdown("<hr style='margin: 8px 0; border-color: rgba(150,150,150,0.15);'>", unsafe_allow_html=True)
+                
+                winner = t1 if s1 >= s2 else t2
+                next_round_winners.append(winner)
+                
+                matches_in_this_round.append({
+                    "match_id": match_name,
+                    "team1": t1, "s1": s1,
+                    "team2": t2, "s2": s2,
+                    "total_games": t_games
+                })
+                i += 2
 
-        final_match_list = []
-        for i in range(0, len(r1_winners) - 1, 2):
-            final_match_list.append({
-                "match_id": f"MATCH FINAL 0{i//2 + 1}",
-                "team1": r1_winners[i],
-                "team2": r1_winners[i+1]
-            })
-        waiting_final_team = r1_winners[-1] if len(r1_winners) % 2 != 0 else None
+            # 홀수 남은 팀 처리 (자동 부전승 진출)
+            if i < len(current_round_teams):
+                loner = current_round_teams[i]
+                next_round_winners.append(loner)
+                st.info(f"⭐ **{loner}** 팀은 이번 라운드 부전승으로 다음 라운드에 직행합니다!")
 
-        final_results = []
-        for idx, fm in enumerate(final_match_list):
-            st.markdown(f"<p style='font-size: 0.75rem; font-weight: 700; color: #888; margin-bottom: 2px;'>{fm['match_id']}</p>", unsafe_allow_html=True)
+            all_match_records.extend(matches_in_this_round)
+            current_round_teams = next_round_winners
+            round_idx += 1
+
+        # [단계 2] 최종 결승전(Finals) 매치 생성 (남은 2팀 대결)
+        st.markdown(f"<h4 style='margin-top:20px; font-size:1rem; font-weight:700;'>🔥 FINALS (결승전 - 이전 라운드 승자 자동 연동)</h4>", unsafe_allow_html=True)
+        
+        final_matches = []
+        if len(current_round_teams) == 2:
+            ft1 = current_round_teams[0]
+            ft2 = current_round_teams[1]
+            match_name = "MATCH FINAL"
+            
+            st.markdown(f"<p style='font-size: 0.75rem; font-weight: 700; color: #888; margin-bottom: 2px;'>{match_name}</p>", unsafe_allow_html=True)
             fc1, fc2, fc3 = st.columns([5, 1.5, 1.5])
             with fc1:
                 st.markdown(f"""
                 <div style="background-color: {'#21262D' if dark_mode else '#E2D929'}; color: {'#E6EDF3' if dark_mode else '#111111'}; padding: 6px 10px; border-radius: 6px; font-weight: 700; margin-bottom: 3px; font-size:12px;">
-                    1P (준결승 승자): {fm['team1']}
+                    1P (승자 진출): {ft1}
                 </div>
                 <div style="background-color: {'#21262D' if dark_mode else '#E2D929'}; color: {'#E6EDF3' if dark_mode else '#111111'}; padding: 6px 10px; border-radius: 6px; font-weight: 700; font-size:12px;">
-                    2P (준결승 승자): {fm['team2']}
+                    2P (승자 진출): {ft2}
                 </div>
                 """, unsafe_allow_html=True)
             with fc2:
-                fs1 = st.number_input("결승 1P 승수", min_value=0, max_value=5, value=0, key=f"t_f_s1_{idx}")
-                fs2 = st.number_input("결승 2P 승수", min_value=0, max_value=5, value=0, key=f"t_f_s2_{idx}")
+                fs1 = st.number_input("결승 1P 승수", min_value=0, max_value=5, value=0, key="final_s1")
+                fs2 = st.number_input("결승 2P 승수", min_value=0, max_value=5, value=0, key="final_s2")
             with fc3:
-                ft_games = st.number_input("결승 총 경기", min_value=0, max_value=7, value=1, key=f"t_f_tg_{idx}")
+                ft_games = st.number_input("결승 총 경기", min_value=0, max_value=7, value=1, key="final_tg")
             
-            st.markdown("<hr style='margin: 8px 0; border-color: rgba(150,150,150,0.15);'>", unsafe_allow_html=True)
-            
-            final_results.append({
-                "match_id": fm['match_id'],
-                "team1": fm['team1'], "s1": fs1,
-                "team2": fm['team2'], "s2": fs2,
-                "total_games": ft_games,
-                "is_bye": False
+            final_matches.append({
+                "match_id": match_name,
+                "team1": ft1, "s1": fs1,
+                "team2": ft2, "s2": fs2,
+                "total_games": ft_games
             })
-
-        if waiting_final_team:
-            st.info(f"⭐ **{waiting_final_team}** 팀은 상위 매치 시드 대기 상태입니다.")
-
+        elif len(current_round_teams) == 1:
+            st.success(f"🏆 최종 우승 팀: **{current_round_teams[0]}** (추가 매치업 없음)")
+        
+        all_match_records.extend(final_matches)
         st.markdown('</div>', unsafe_allow_html=True)
 
         # ==========================================
-        # 10. 포인트 정산 시스템
+        # 10. 포인트 정산 시스템 (모든 라운드 전적 누적)
         # ==========================================
         st.markdown("---")
         st.markdown("### 💰 포인트 지급 정산 결과")
@@ -427,21 +424,7 @@ if run_match and df_input is not None:
 
             team_map = {team_names_list[i]: teams[i] for i in range(num_teams)}
 
-            for r in r1_results:
-                b_team, b_wins = r["team1"], int(r["s1"])
-                r_team, r_wins = r["team2"], int(r["s2"])
-                tg = int(r["total_games"])
-
-                if b_team in team_map:
-                    for p in team_map[b_team]:
-                        player_stats[p['닉네임']]["total_games"] += tg
-                        player_stats[p['닉네임']]["total_wins"] += b_wins
-                if r_team in team_map:
-                    for p in team_map[r_team]:
-                        player_stats[p['닉네임']]["total_games"] += tg
-                        player_stats[p['닉네임']]["total_wins"] += r_wins
-
-            for r in final_results:
+            for r in all_match_records:
                 b_team, b_wins = r["team1"], int(r["s1"])
                 r_team, r_wins = r["team2"], int(r["s2"])
                 tg = int(r["total_games"])
@@ -466,5 +449,5 @@ if run_match and df_input is not None:
                 })
 
             df_points = pd.DataFrame(result_data)
-            st.success("✅ 토너먼트 승자 연동 전적 및 포인트 정산이 완료되었습니다!")
+            st.success("✅ 토너먼트 전체 라운드 연동 및 포인트 정산이 완료되었습니다!")
             st.dataframe(df_points, use_container_width=True, hide_index=True)
