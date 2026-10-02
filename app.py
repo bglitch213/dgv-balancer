@@ -14,11 +14,12 @@ st.set_page_config(
 )
 
 # ==========================================
-# 2. 컴팩트 미니멀 테마 CSS 적용
+# 2. 컴팩트 미니멀 테마 CSS (사이드바 + 표 컴포넌트 완벽 연동)
 # ==========================================
 def inject_theme_css(is_dark):
     if is_dark:
         bg_color = "#0E1117"
+        sidebar_bg = "#161B22"
         card_bg = "#161B22"
         border_color = "#30363D"
         text_color = "#E6EDF3"
@@ -26,15 +27,20 @@ def inject_theme_css(is_dark):
         input_bg = "#21262D"
         accent_btn = "#238636"
         accent_btn_hover = "#2ea043"
+        table_bg = "#161B22"
+        table_text = "#E6EDF3"
     else:
         bg_color = "#F8FAFC"
+        sidebar_bg = "#F1F5F9"
         card_bg = "#FFFFFF"
         border_color = "#E2E8F0"
         text_color = "#0F172A"
         sub_text = "#64748B"
-        input_bg = "#F1F5F9"
+        input_bg = "#FFFFFF"
         accent_btn = "#2563EB"
         accent_btn_hover = "#1D4ED8"
+        table_bg = "#FFFFFF"
+        table_text = "#0F172A"
 
     st.markdown(f"""
     <style>
@@ -44,11 +50,20 @@ def inject_theme_css(is_dark):
             font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif !important;
             background-color: {bg_color} !important;
             color: {text_color} !important;
-            font-size: 14px !important;
+            font-size: 13.5px !important;
         }}
 
         .stApp {{
             background-color: {bg_color};
+        }}
+
+        /* 사이드바 배경 및 텍스트 완벽 대응 */
+        [data-testid="stSidebar"] {{
+            background-color: {sidebar_bg} !important;
+            border-right: 1px solid {border_color};
+        }}
+        [data-testid="stSidebar"] * {{
+            color: {text_color} !important;
         }}
 
         .main .block-container {{
@@ -90,6 +105,27 @@ def inject_theme_css(is_dark):
         }}
         .stButton > button:hover {{
             background-color: {accent_btn_hover} !important;
+        }}
+
+        /* 데이터프레임 및 데이터 에디터 표 컴포넌트 다크/라이트모드 동기화 */
+        [data-testid="stDataFrame"] div, [data-testid="stDataEditor"] div {{
+            background-color: {table_bg} !important;
+            color: {table_text} !important;
+        }}
+        
+        table {{
+            background-color: {table_bg} !important;
+            color: {table_text} !important;
+        }}
+
+        th {{
+            background-color: {input_bg} !important;
+            color: {text_color} !important;
+        }}
+
+        td {{
+            background-color: {table_bg} !important;
+            color: {table_text} !important;
         }}
 
         .streamlit-expanderHeader {{
@@ -232,7 +268,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # 입력 방식 선택 탭
-input_tab1, input_tab2 = st.tabs(["🔗 Google Sheets 연동", "✏️ 직접 명단 입력"])
+input_tab1, input_tab2 = st.tabs(["🔗 Google Sheets 연동", "✏️️ 직접 명단 입력"])
 
 df_input = None
 
