@@ -192,13 +192,16 @@ def balance_multi_teams(df, num_teams, team_size=5, cur_weight=0.6):
         return None, None
 
     for p in players:
-        p['MMR'] = calculate_player_mmr(
-            p.get('현재티어'), p.get('현재RR', 0),
-            p.get('최고티어'), p.get('최고RR', 0),
+        base_mmr = calculate_player_mmr(
+            p.get('현재티어'), p.get('현재RR',0),
+            p.get('최고티어'), p.get('최고RR',0),
             cur_weight
         )
+        p['MMR'] = base_mmr + random.uniform(-0.5, 0.5)
 
+    random.shuffle(players)
     sorted_players = sorted(players[:total_required], key=lambda x: x['MMR'], reverse=True)
+    
     teams = [[] for _ in range(num_teams)]
     
     for i, p in enumerate(sorted_players):
@@ -210,7 +213,8 @@ def balance_multi_teams(df, num_teams, team_size=5, cur_weight=0.6):
         return sum(p['MMR'] for p in t) / len(t) if t else 0
 
     best_var = sum((team_avg(t) - sum(team_avg(x) for x in teams)/num_teams)**2 for t in teams)
-    
+
+    # 최적화 루프
     for _ in range(1000):
         t1, t2 = random.sample(range(num_teams), 2)
         idx1, idx2 = random.randint(0, team_size - 1), random.randint(0, team_size - 1)
