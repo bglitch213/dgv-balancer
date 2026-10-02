@@ -8,7 +8,7 @@ import streamlit as st
 # ==========================================
 st.set_page_config(
     page_title="발로란트 내전 팀 밸런서",
-    page_icon="⚔️️",
+    page_icon="⚔️",
     layout="wide"
 )
 
@@ -23,7 +23,7 @@ RAW_TIER_SCORES = {
     "초월자 1": 1900, "초월자 2": 2000, "초월자 3": 2100,
     "불멸 1": 2200, "불멸 2": 2300, "불멸 3": 2400,
     "레디언트": 2500,
-    # 줄여쓰는 약어 지원
+    # 약어 표현 지원
     "플래 1": 1300, "플래 2": 1400, "플래 3": 1500,
     "다이아 1": 1600, "다이아 2": 1700, "다이아 3": 1800,
 }
@@ -50,7 +50,7 @@ def calculate_player_mmr(cur_tier, cur_rr, peak_tier, peak_rr, cur_weight=0.6):
     return (cur_total * cur_weight) + (peak_total * (1 - cur_weight))
 
 # ==========================================
-# 2. 구글 시트 연동 (캐시 방지 및 실시간 읽기)
+# 2. 구글 시트 연동
 # ==========================================
 REQUIRED_HEADERS = ["닉네임", "현재티어", "현재RR", "최고티어", "최고RR"]
 
@@ -61,17 +61,13 @@ def load_data_from_google_sheet(url):
         else:
             sheet_id = url.strip()
             
-        # 타임스탬프 파라미터(_t)를 추가하여 항상 최신 시트 데이터를 가져옴 (캐시 방지)
         csv_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&_t={int(time.time())}"
-        
         df = pd.read_csv(csv_url)
         
-        # 헤더 띄어쓰기 자동 제거 및 정규화
+        # 헤더 띄어쓰기 정규화
         df.columns = [str(col).replace(" ", "").strip() for col in df.columns]
         
-        # 1행 헤더 규칙 검증
         missing_headers = [h for h in REQUIRED_HEADERS if h not in df.columns]
-        
         if missing_headers:
             st.error("❌ 구글 시트 1행 헤더 규칙이 맞지 않습니다!")
             st.warning(f"누락/오타 항목: **{', '.join(missing_headers)}**")
@@ -91,7 +87,7 @@ def balance_multi_teams(df, num_teams, team_size=5, cur_weight=0.6):
     total_required = num_teams * team_size
     
     if len(players) < total_required:
-        st.warning(f"⚠️ 인원이 부족합니다! {num_teams}개 팀({team_size}명)을 짜려면 최소 {total_required}명(2행 이후 데이터)이 필요합니다. (현재: {len(players)}명)")
+        st.warning(f"⚠️ 인원이 부족합니다! {num_teams}개 팀({team_size}명)을 짜려면 최소 {total_required}명이 필요합니다. (현재: {len(players)}명)")
         return None, None
 
     for p in players:
@@ -137,7 +133,7 @@ def balance_multi_teams(df, num_teams, team_size=5, cur_weight=0.6):
 # 4. UI 구성 및 자동 로드 처리
 # ==========================================
 st.title("⚔️ 발로란트 내전 팀 밸런서")
-st.caption("구글 시트 URL을 입력하면 실시간으로 데이터를 반영하여 팀을 구성합니다.")
+st.caption("구글 시트 URL 연동 또는 직접 입력으로 발로란트 팀 밸런스를 맞춥니다.")
 
 # 사이드바 설정
 st.sidebar.header("⚙️ 내전 옵션")
@@ -146,9 +142,11 @@ team_size = st.sidebar.number_input("팀당 인원 수", min_value=1, max_value=
 cur_weight_pct = st.sidebar.slider("현재 티어 반영 비중 (%)", 0, 100, 60, 5)
 cur_weight = cur_weight_pct / 100.0
 
-auto_balance = st.sidebar.checkbox("⚡ URL/옵션 변경 시 팀 자동 다시 짜기", value=True)
+total_required = num_teams * team_size
 
-st.sidebar.info(f"📌 **필요 인원**: {num_teams * team_size}명\n📌 **1행 헤더**: 닉네임 | 현재티어 | 현재RR | 최고티어 | 최고RR")
+auto_balance = st.sidebar.checkbox("⚡ 옵션/데이터 변경 시 팀 자동 다시 짜기", value=True)
+
+st.sidebar.info(f"📌 **필요 총 인원**: **{total_required}명** ({num_teams}개 팀 × {team_size}명)\n📌 **1행 헤더**: 닉네임 | 현재티어 | 현재RR | 최고티어 | 최고RR")
 
 # 입력 방식 선택
 input_mode = st.radio("데이터 입력 방식을 선택하세요:", ["🔗 구글 시트 URL 연동 (자동 반영)", "✏️ 직접 입력하기"], horizontal=True)
@@ -167,19 +165,31 @@ if "🔗 구글 시트 URL" in input_mode:
     if sheet_url:
         df_sheet = load_data_from_google_sheet(sheet_url)
         if df_sheet is not None:
-            st.success(f"✅ 구글 시트 자동 연동 성공! (총 {len(df_sheet)}명 수신 - 2행부터 데이터 반영)")
+            st.success(f"✅ 구글 시트 자동 연동 성공! (총 {len(df_sheet)}명 수신)")
             st.dataframe(df_sheet, use_container_width=True)
             df_input = df_sheet
 
 else:
-    sample_10_players = {
-        "닉네임": [f"선수_{i+1}" for i in range(10)],
-        "현재티어": ["레디언트", "불멸3", "불멸 1", "초월자 2", "다이아1", "플래티넘 3", "골드 2", "실버 1", "골드 1", "브론즈2"],
-        "현재RR": [400, 150, 0, 30, 0, 0, 0, 0, 0, 0],
-        "최고티어": ["레디언트", "레디언트", "불멸 2", "초월자 3", "다이아 2", "다이아 1", "플래 1", "실버 3", "골드 2", "실버 1"],
-        "최고RR": [550, 200, 0, 0, 0, 0, 0, 0, 0, 0]
+    # 💡 동적 행 자동 생성 (팀 수가 변경되면 인원수만큼 표 행이 자동으로 확장됩니다)
+    sample_tiers = ["레디언트", "불멸 3", "불멸 1", "초월자 2", "다이아 1", "플래티넘 3", "골드 2", "실버 1", "골드 1", "브론즈 2"]
+    
+    dynamic_players = {
+        "닉네임": [f"선수_{i+1}" for i in range(total_required)],
+        "현재티어": [sample_tiers[i % len(sample_tiers)] for i in range(total_required)],
+        "현재RR": [0] * total_required,
+        "최고티어": [sample_tiers[i % len(sample_tiers)] for i in range(total_required)],
+        "최고RR": [0] * total_required
     }
-    df_input = st.data_editor(pd.DataFrame(sample_10_players), num_rows="dynamic", use_container_width=True)
+    
+    st.caption(f"💡 현재 설정된 팀 수에 따라 **총 {total_required}명**의 입력칸이 자동으로 준비되었습니다.")
+    
+    # key=f"editor_{total_required}" 로 설정하여 팀 수/인원 변경 시 표 크기가 자동 재설정됨
+    df_input = st.data_editor(
+        pd.DataFrame(dynamic_players),
+        num_rows="dynamic",
+        use_container_width=True,
+        key=f"editor_{total_required}"
+    )
 
 # ==========================================
 # 5. 팀 밸런스 생성 및 출력
