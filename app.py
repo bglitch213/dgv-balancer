@@ -7,7 +7,7 @@ import streamlit as st
 # 1. 페이지 레이아웃 설정 (기본 화이트 모드)
 # ==========================================
 st.set_page_config(
-    page_title="Team Balancer Pro",
+    page_title="대깨발 내전 밸런스 맞추기",
     page_icon="⚖️",
     layout="wide",
     initial_sidebar_state="expanded"
