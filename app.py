@@ -230,7 +230,7 @@ def balance_multi_teams(df, num_teams, team_size=5, cur_weight=0.6):
 # ==========================================
 st.markdown("""
 <div class="header-card">
-    <h2 style="margin: 0; font-size: 1.3rem; font-weight: 700;">🏆 VCT STYLE TOURNAMENT & BALANCER</h2>
+    <h2 style="margin: 0; font-size: 1.3rem; font-weight: 700;">🏆 대깨발 내전</h2>
     <p style="margin: 3px 0 0 0; font-size: 0.8rem; opacity: 0.75;">다단계 토너먼트 자동 연동 브래킷 • 부전승(BYE) 지원 • 포인트 자동 정산</p>
 </div>
 """, unsafe_allow_html=True)
