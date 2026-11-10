@@ -165,10 +165,8 @@ def calculate_player_mmr(cur_tier, cur_rr, peak_tier, peak_rr, cur_weight=0.6):
 # ==========================================
 REQUIRED_HEADERS = ["닉네임", "현재티어", "현재RR", "최고티어", "최고RR"]
 
-def load_data_from_google_sheet(url):
+def load_roster(csv_url, error_msg):
     try:
-        sheet_id = url.split("/d/")[1].split("/")[0] if "docs.google.com/spreadsheets/d/" in url else url.strip()
-        csv_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&_t={int(time.time())}"
         df = pd.read_csv(csv_url)
         df.columns = [str(col).replace(" ", "").strip() for col in df.columns]
         missing = [h for h in REQUIRED_HEADERS if h not in df.columns]
@@ -177,8 +175,13 @@ def load_data_from_google_sheet(url):
             return None
         return df
     except Exception:
-        st.error("구글 시트를 불러오지 못했습니다. 링크 공유 설정(뷰어 접근)을 확인하세요.")
+        st.error(error_msg)
         return None
+
+def load_data_from_google_sheet(url):
+    sheet_id = url.split("/d/")[1].split("/")[0] if "docs.google.com/spreadsheets/d/" in url else url.strip()
+    csv_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&_t={int(time.time())}"
+    return load_roster(csv_url, "구글 시트를 불러오지 못했습니다. 링크 공유 설정(뷰어 접근)을 확인하세요.")
 
 # ==========================================
 # 6. 밸런싱 알고리즘
@@ -239,8 +242,8 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-input_tab1, input_tab2 = st.tabs(["🔗 Google Sheets 연동", "✏️ 직접 명단 입력"])
-df_input = None
+input_tab1, input_tab2, input_tab3 = st.tabs(["🔗 Google Sheets 연동", "✏️ 직접 명단 입력", "🤖 디스코드 내전 신청"])
+df_sheet = df_bot = None
 
 with input_tab1:
     sheet_url = st.text_input("구글 시트 공유 URL 입력", placeholder="https://docs.google.com/spreadsheets/d/...")
@@ -250,7 +253,6 @@ with input_tab1:
             st.success(f"✅ 명단 불러오기 성공 (총 {len(df_sheet)}명)")
             with st.expander("📄 불러온 선수 명단 미리보기"):
                 st.dataframe(df_sheet, use_container_width=True)
-            df_input = df_sheet
 
 with input_tab2:
     st.info("아래 표에 직접 참가자 명단과 티어를 입력하세요.")
@@ -262,12 +264,30 @@ with input_tab2:
         "최고티어": [sample_tiers[i % len(sample_tiers)] for i in range(total_required)],
         "최고RR": [0] * total_required
     }
-    df_input = st.data_editor(
+    df_manual = st.data_editor(
         pd.DataFrame(default_data),
         num_rows="dynamic",
         use_container_width=True,
         key=f"editor_{total_required}"
     )
+
+with input_tab3:
+    try:  # Streamlit Cloud 의 Secrets 에 SCRIM_URL 을 넣어 두면 주소를 매번 입력하지 않아도 됨
+        default_bot_url = st.secrets.get("SCRIM_URL", "")
+    except Exception:
+        default_bot_url = ""
+    bot_url = st.text_input("디스코드 봇 신청 명단 주소", value=default_bot_url,
+                            placeholder="https://봇주소/api/scrim.csv?guild=서버ID&key=...")
+    st.button("🔄 신청 명단 새로고침")
+    if bot_url:
+        df_bot = load_roster(bot_url, "디스코드 신청 명단을 불러오지 못했습니다. 주소(guild, key)를 확인하세요.")
+        if df_bot is not None:
+            st.success(f"✅ 디스코드 신청 명단 불러오기 성공 (총 {len(df_bot)}명)")
+            with st.expander("📄 신청자 명단 미리보기"):
+                st.dataframe(df_bot, use_container_width=True)
+
+# 디스코드 신청 명단 > 구글 시트 > 직접 입력 순으로 사용 (예전에는 직접 입력표가 항상 시트 명단을 덮어썼음)
+df_input = next((d for d in (df_bot, df_sheet) if d is not None), df_manual)
 
 # ==========================================
 # 8. 팀 매칭 및 멀티 라운드 토너먼트 브래킷
