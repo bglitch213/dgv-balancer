@@ -259,12 +259,11 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# 탭은 모두 동시에 실행되어 어느 탭을 보고 있는지 알 수 없으므로, 사용할 명단을 직접 고르게 함
+# 고른 명단의 입력 화면만 아래에 표시 (탭과 버튼이 따로 있으면 헷갈려서 버튼 하나로 통일)
 source = st.radio("📌 팀 짜기에 사용할 명단", ["✏️ 직접 입력", "🤖 디스코드 신청", "🔗 구글 시트"], horizontal=True)
-input_tab1, input_tab2, input_tab3 = st.tabs(["🔗 Google Sheets 연동", "✏️ 직접 명단 입력", "🤖 디스코드 내전 신청"])
-df_sheet = df_bot = None
+df_sheet = df_bot = df_manual = None
 
-with input_tab1:
+if source == "🔗 구글 시트":
     sheet_url = st.text_input("구글 시트 공유 URL 입력", placeholder="https://docs.google.com/spreadsheets/d/...")
     if sheet_url:
         df_sheet = load_data_from_google_sheet(sheet_url)
@@ -273,7 +272,7 @@ with input_tab1:
             with st.expander("📄 불러온 선수 명단 미리보기"):
                 st.dataframe(df_sheet, use_container_width=True)
 
-with input_tab2:
+if source == "✏️ 직접 입력":
     st.info("아래 표에 직접 참가자 명단과 티어를 입력하세요.")
     sample_tiers = ["레디언트", "불멸 3", "불멸 1", "초월자 2", "다이아 1", "플레티넘 3", "골드 2", "실버 1", "골드 1", "브론즈 2"]
     default_data = {
@@ -298,7 +297,7 @@ with input_tab2:
     if len(unknown):  # 오타가 나면 조용히 골드 1 로 계산되므로 미리 알려줌
         st.warning("⚠️ 티어를 인식하지 못한 선수(골드 1 로 계산됨): " + ", ".join(unknown["닉네임"].astype(str)))
 
-with input_tab3:
+if source == "🤖 디스코드 신청":
     try:  # Streamlit Cloud 의 Secrets 에 SCRIM_URL 을 넣어 두면 주소를 매번 입력하지 않아도 됨
         default_bot_url = st.secrets.get("SCRIM_URL", "")
     except Exception:
@@ -313,10 +312,10 @@ with input_tab3:
             with st.expander("📄 신청자 명단 미리보기"):
                 st.dataframe(df_bot, use_container_width=True)
 
-# 위에서 고른 명단만 사용 (다른 탭에 값이 들어 있어도 섞이지 않음)
+# 위에서 고른 명단만 사용 (다른 명단 값은 섞이지 않음)
 df_input = {"✏️ 직접 입력": df_manual, "🤖 디스코드 신청": df_bot, "🔗 구글 시트": df_sheet}[source]
 if df_input is None:
-    st.warning(f"'{source}' 명단을 아직 불러오지 못했습니다. 해당 탭에서 주소를 입력하거나, 위에서 다른 명단을 선택하세요.")
+    st.warning(f"'{source}' 명단을 아직 불러오지 못했습니다. 위 입력란에 주소를 넣거나, 다른 명단을 선택하세요.")
 
 # ==========================================
 # 8. 팀 매칭 및 멀티 라운드 토너먼트 브래킷
