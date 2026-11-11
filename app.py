@@ -1,5 +1,8 @@
+import io
+import re
 import time
 import random
+import requests
 import pandas as pd
 import streamlit as st
 
@@ -136,12 +139,13 @@ RAW_TIER_SCORES = {
     "브론즈 1": 400, "브론즈 2": 500, "브론즈 3": 600,
     "실버 1": 700, "실버 2": 800, "실버 3": 900,
     "골드 1": 1000, "골드 2": 1100, "골드 3": 1200,
-    "플래티넘 1": 1300, "플래티넘 2": 1400, "플래티넘 3": 1500,
+    "플레티넘 1": 1300, "플레티넘 2": 1400, "플레티넘 3": 1500,
     "다이아몬드 1": 1600, "다이아몬드 2": 1700, "다이아몬드 3": 1800,
     "초월자 1": 1900, "초월자 2": 2000, "초월자 3": 2100,
     "불멸 1": 2200, "불멸 2": 2300, "불멸 3": 2400,
     "레디언트": 2500,
     "플래 1": 1300, "플래 2": 1400, "플래 3": 1500,
+    "플래티넘 1": 1300, "플래티넘 2": 1400, "플래티넘 3": 1500,  # 예전 철자도 인식
     "다이아 1": 1600, "다이아 2": 1700, "다이아 3": 1800,
 }
 
@@ -166,16 +170,29 @@ def calculate_player_mmr(cur_tier, cur_rr, peak_tier, peak_rr, cur_weight=0.6):
 REQUIRED_HEADERS = ["닉네임", "현재티어", "현재RR", "최고티어", "최고RR"]
 
 def load_roster(csv_url, error_msg):
+    url = csv_url.strip().strip("\"'“”‘’")  # 붙여넣기할 때 따라오는 공백·따옴표 제거
     try:
-        df = pd.read_csv(csv_url)
+        # Render 무료 서버는 잠들어 있다 깨어나는 데 시간이 걸려서 40초까지 기다리고 한 번 더 시도
+        for attempt in range(2):
+            try:
+                r = requests.get(url, timeout=40)
+                break
+            except requests.exceptions.RequestException:
+                if attempt:
+                    raise
+        if r.status_code != 200:
+            reason = {403: "비밀키(key)가 맞지 않습니다", 400: "서버 ID(guild)가 빠졌거나 숫자가 아닙니다"}.get(r.status_code, r.text[:100])
+            raise ValueError(f"HTTP {r.status_code} - {reason}")
+        df = pd.read_csv(io.BytesIO(r.content))  # 글자 깨짐 방지: 항상 UTF-8 로 읽음
         df.columns = [str(col).replace(" ", "").strip() for col in df.columns]
         missing = [h for h in REQUIRED_HEADERS if h not in df.columns]
         if missing:
             st.error(f"❌ 시트 헤더 오류: **{', '.join(missing)}** 항목이 누락되었습니다.")
             return None
         return df
-    except Exception:
-        st.error(error_msg)
+    except Exception as e:
+        why = re.sub(r"key=[^&\s)\"']+", "key=***", str(e))  # 오류문에 비밀키가 보이지 않게 가림
+        st.error(f"{error_msg}\n\n원인: {type(e).__name__}: {why}")
         return None
 
 def load_data_from_google_sheet(url):
@@ -256,7 +273,7 @@ with input_tab1:
 
 with input_tab2:
     st.info("아래 표에 직접 참가자 명단과 티어를 입력하세요.")
-    sample_tiers = ["레디언트", "불멸 3", "불멸 1", "초월자 2", "다이아 1", "플래티넘 3", "골드 2", "실버 1", "골드 1", "브론즈 2"]
+    sample_tiers = ["레디언트", "불멸 3", "불멸 1", "초월자 2", "다이아 1", "플레티넘 3", "골드 2", "실버 1", "골드 1", "브론즈 2"]
     default_data = {
         "닉네임": [f"Player_{i+1}" for i in range(total_required)],
         "현재티어": [sample_tiers[i % len(sample_tiers)] for i in range(total_required)],
