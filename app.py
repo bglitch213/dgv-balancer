@@ -123,7 +123,7 @@ inject_theme_css(dark_mode)
 
 st.sidebar.markdown("---")
 st.sidebar.markdown("### ⚙️ 매칭 설정")
-num_teams = st.sidebar.number_input("팀 개수 (3팀~8팀 지원)", min_value=2, max_value=8, value=4, step=1)
+num_teams = st.sidebar.number_input("팀 개수 (2팀~8팀 지원)", min_value=2, max_value=8, value=2, step=1)
 team_size = st.sidebar.number_input("팀당 인원 수", min_value=1, max_value=5, value=5, step=1)
 cur_weight_pct = st.sidebar.slider("현재 티어 반영 비중 (%)", 0, 100, 60, 5)
 cur_weight = cur_weight_pct / 100.0
