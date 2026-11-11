@@ -160,8 +160,8 @@ def get_tier_score(tier_name):
 def calculate_player_mmr(cur_tier, cur_rr, peak_tier, peak_rr, cur_weight=0.6):
     cur_base = get_tier_score(cur_tier)
     peak_base = get_tier_score(peak_tier)
-    cur_rr_val = int(cur_rr) if pd.notna(cur_rr) and str(cur_rr).isdigit() else 0
-    peak_rr_val = int(peak_rr) if pd.notna(peak_rr) and str(peak_rr).isdigit() else 0
+    cur_rr_val = int(pd.to_numeric(cur_rr, errors="coerce")) if pd.notna(pd.to_numeric(cur_rr, errors="coerce")) else 0
+    peak_rr_val = int(pd.to_numeric(peak_rr, errors="coerce")) if pd.notna(pd.to_numeric(peak_rr, errors="coerce")) else 0
     return ((cur_base + cur_rr_val) * cur_weight) + ((peak_base + peak_rr_val) * (1 - cur_weight))
 
 # ==========================================
@@ -259,6 +259,8 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
+# 탭은 모두 동시에 실행되어 어느 탭을 보고 있는지 알 수 없으므로, 사용할 명단을 직접 고르게 함
+source = st.radio("📌 팀 짜기에 사용할 명단", ["✏️ 직접 입력", "🤖 디스코드 신청", "🔗 구글 시트"], horizontal=True)
 input_tab1, input_tab2, input_tab3 = st.tabs(["🔗 Google Sheets 연동", "✏️ 직접 명단 입력", "🤖 디스코드 내전 신청"])
 df_sheet = df_bot = None
 
@@ -287,6 +289,14 @@ with input_tab2:
         use_container_width=True,
         key=f"editor_{total_required}"
     )
+    # 빈 줄 제거 + RR 빈칸은 0 으로
+    df_manual = df_manual.dropna(subset=["닉네임"])
+    df_manual = df_manual[df_manual["닉네임"].astype(str).str.strip() != ""].copy()
+    df_manual[["현재RR", "최고RR"]] = df_manual[["현재RR", "최고RR"]].apply(pd.to_numeric, errors="coerce").fillna(0)
+    unknown = df_manual[~df_manual["현재티어"].map(lambda t: str(t).replace(" ", "") in BASE_TIER_SCORES)
+                        | ~df_manual["최고티어"].map(lambda t: str(t).replace(" ", "") in BASE_TIER_SCORES)]
+    if len(unknown):  # 오타가 나면 조용히 골드 1 로 계산되므로 미리 알려줌
+        st.warning("⚠️ 티어를 인식하지 못한 선수(골드 1 로 계산됨): " + ", ".join(unknown["닉네임"].astype(str)))
 
 with input_tab3:
     try:  # Streamlit Cloud 의 Secrets 에 SCRIM_URL 을 넣어 두면 주소를 매번 입력하지 않아도 됨
@@ -303,8 +313,10 @@ with input_tab3:
             with st.expander("📄 신청자 명단 미리보기"):
                 st.dataframe(df_bot, use_container_width=True)
 
-# 디스코드 신청 명단 > 구글 시트 > 직접 입력 순으로 사용 (예전에는 직접 입력표가 항상 시트 명단을 덮어썼음)
-df_input = next((d for d in (df_bot, df_sheet) if d is not None), df_manual)
+# 위에서 고른 명단만 사용 (다른 탭에 값이 들어 있어도 섞이지 않음)
+df_input = {"✏️ 직접 입력": df_manual, "🤖 디스코드 신청": df_bot, "🔗 구글 시트": df_sheet}[source]
+if df_input is None:
+    st.warning(f"'{source}' 명단을 아직 불러오지 못했습니다. 해당 탭에서 주소를 입력하거나, 위에서 다른 명단을 선택하세요.")
 
 # ==========================================
 # 8. 팀 매칭 및 멀티 라운드 토너먼트 브래킷
